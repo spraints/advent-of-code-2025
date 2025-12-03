@@ -10,6 +10,7 @@ seen = Set.new
 max = ranges.flatten.max
 l = 1
 r = 10
+iters = 0
 loop do
   l2 = l * r + l
   break if l2 > max
@@ -21,6 +22,7 @@ loop do
   end
   seen << l2
   loop do
+    iters += 1
     l2 = l2 * r + l
     break if l2 > max
     #p [:more, l2]
@@ -35,4 +37,5 @@ loop do
   r *= 10 if l == r
 end
 
+puts "(#{iters} iterations)"
 puts invalid1, invalid2
