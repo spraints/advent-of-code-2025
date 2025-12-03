@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -eu
+
+day="$(printf "%02d" "$1")"
+
+for input in input/${day}*; do
+  printf '================\n%s\n' "$input"
+  ruby rb/${day}.rb ${input}
+done
+
+sol=solutions/${day}.txt
+if [ -f "${sol}" ]; then
+  printf '================\n%s\n' "$sol"
+  cat ${sol}
+fi
