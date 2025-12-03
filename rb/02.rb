@@ -1,25 +1,38 @@
-invalid = 0
-ARGF.read.split(",").map(&:strip).each do |range|
-  from, to = range.split("-", 2)
-  exp = from.size
-  from, to = from.to_i, to.to_i
-  #p [from, to, exp]
-  exp = (exp + 1) / 2
-  r = 10**exp
-  l = from / r
-  while l * r < to
-    lmin = 10**(exp - 1)
-    l = [l, lmin].max
-    l.upto(r-1) do |i|
-      #p i: i, xy: i*r+i
-      xy = i * r + i
-      next if xy < from
-      break if xy > to
-      #puts xy
-      invalid += xy
-    end
-    l = r
-    r *= 10
+require "set"
+
+ranges = ARGF.read.split(",").map(&:strip).map { |r| r.split("-", 2).map(&:to_i) }
+
+invalid1 = 0
+invalid2 = 0
+
+seen = Set.new
+
+max = ranges.flatten.max
+l = 1
+r = 10
+loop do
+  l2 = l * r + l
+  break if l2 > max
+  #p [l, r, l2]
+  if !seen.include?(l2) && ranges.any? { |a,b| a <= l2 && l2 <= b }
+    invalid1 += l2
+    invalid2 += l2
+    #p [:both, l2]
   end
+  seen << l2
+  loop do
+    l2 = l2 * r + l
+    break if l2 > max
+    #p [:more, l2]
+    if !seen.include?(l2) && ranges.any? { |a,b| a <= l2 && l2 <= b }
+      invalid2 += l2
+      #p [:part2, l2]
+    end
+    seen << l2
+  end
+
+  l += 1
+  r *= 10 if l == r
 end
-puts invalid
+
+puts invalid1, invalid2
