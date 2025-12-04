@@ -3,14 +3,23 @@
 set -eu
 
 day="$(printf "%02d" "$1")"
+sep() {
+  printf '================\n'
+}
 
 for input in input/${day}*; do
-  printf '================\n%s\n' "$input"
-  ruby rb/${day}.rb ${input}
+  if [ -e rb/${day}.rb ]; then
+    sep
+    (set -x; ruby rb/${day}.rb ${input})
+  fi
+  if [ -e zig/${day}.zig ]; then
+    sep
+    (set -x; zig run zig/${day}.zig -- ${input})
+  fi
 done
 
 sol=solutions/${day}.txt
 if [ -f "${sol}" ]; then
-  printf '================\n%s\n' "$sol"
-  cat ${sol}
+  sep
+  (set -x; cat ${sol})
 fi
