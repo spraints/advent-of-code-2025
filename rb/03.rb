@@ -1,13 +1,17 @@
+$iters = 0
+
 def max_j(ary, n, left = 0)
   if n == 0
     dbg "=a=> #{n}: #{left}"
     return left
   end
   if ary.size == n
+    $iters += n
     tot = ary.inject(left) { |accum, x| accum * 10 + x }
     dbg "=b=> #{n}: #{tot}"
   end
   9.downto(1).each do |x|
+    $iters += 1
     i = ary.index(x)
     next if i.nil?
     dbg "#{x}@#{i}, need #{n-1} more"
@@ -34,3 +38,4 @@ banks.each do |batteries|
   total_joltage2 += js
 end
 puts total_joltage, total_joltage2
+puts "iters: #$iters"
