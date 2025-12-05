@@ -7,10 +7,16 @@ sep() {
   printf '================\n'
 }
 
+# Make it harder to delete or change these.
+chmod 400 input/*
+
 sol=solutions/${day}.txt
 if [ -f "${sol}" ]; then
   sep
   (set -x; cat ${sol})
+  if [ "$(stat -f %p ${sol})" -ne 100400 ]; then
+    printf '!!! WARNING !!! %s is not write protected!\n' ${sol}
+  fi
 fi
 
 for input in input/${day}*; do
