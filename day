@@ -10,6 +10,11 @@ sep() {
 # Make it harder to delete or change these.
 chmod 400 input/*
 
+if [ -e zig/${day}.zig ]; then
+  sep
+  (set -x; zig test zig/${day}.zig)
+fi
+
 sol=solutions/${day}.txt
 if [ -f "${sol}" ]; then
   sep
