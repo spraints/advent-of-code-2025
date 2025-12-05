@@ -7,6 +7,12 @@ sep() {
   printf '================\n'
 }
 
+sol=solutions/${day}.txt
+if [ -f "${sol}" ]; then
+  sep
+  (set -x; cat ${sol})
+fi
+
 for input in input/${day}*; do
   if [ -e rb/${day}.rb ]; then
     sep
@@ -17,9 +23,3 @@ for input in input/${day}*; do
     (set -x; zig run zig/${day}.zig -- ${input})
   fi
 done
-
-sol=solutions/${day}.txt
-if [ -f "${sol}" ]; then
-  sep
-  (set -x; cat ${sol})
-fi
