@@ -8,3 +8,14 @@ ingredients.strip.lines.each do |ing|
   fresh += 1 if ranges.any? { |a,b| iters += 1; a <= ing && ing <= b }
 end
 puts "(iterations: #{iters})", fresh
+
+iters = 0
+max = 0
+spoiled = 0
+ranges.sort.each do |a, b|
+  if a > max
+    spoiled += (a - max - 1)
+  end
+  max = [b, max].max
+end
+puts max - spoiled
