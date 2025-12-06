@@ -5,7 +5,7 @@ const ClicksRes = struct {
     clicks: u32,
 };
 
-fn clicks(start: i32, dir: u8, dist: i32) ClicksRes {
+fn rotate(start: i32, dir: u8, dist: i32) ClicksRes {
     // std.debug.print("clicks {} {} {}\n", .{start,dir,dist});
     if (dist == 0) {
         return .{.new_pos = start, .clicks = 0};
@@ -22,27 +22,27 @@ fn clicks(start: i32, dir: u8, dist: i32) ClicksRes {
     return ClicksRes{.new_pos = new_real, .clicks = ct};
 }
 
-test clicks {
-    try std.testing.expectEqual(ClicksRes{.new_pos = 50, .clicks =0}, clicks(50,'L',0));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks =1}, clicks(50,'L',50));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =1}, clicks(50,'L',51));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =2}, clicks(50,'L',151));
+test rotate {
+    try std.testing.expectEqual(ClicksRes{.new_pos = 50, .clicks =0}, rotate(50,'L',0));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks =1}, rotate(50,'L',50));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =1}, rotate(50,'L',51));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =2}, rotate(50,'L',151));
 
-    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks =0}, clicks(0,'L',0));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =0}, clicks(0,'L',1));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 1, .clicks =0}, clicks(0,'L',99));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks =1}, clicks(0,'L',100));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =1}, clicks(0,'L',101));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =2}, clicks(0,'L',201));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks =0}, rotate(0,'L',0));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =0}, rotate(0,'L',1));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 1, .clicks =0}, rotate(0,'L',99));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks =1}, rotate(0,'L',100));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =1}, rotate(0,'L',101));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks =2}, rotate(0,'L',201));
 
-    try std.testing.expectEqual(ClicksRes{.new_pos = 50, .clicks = 0}, clicks(50,'R',0));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks = 0}, clicks(50,'R',49));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 1}, clicks(50,'R',50));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 2}, clicks(50,'R',150));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 50, .clicks = 0}, rotate(50,'R',0));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks = 0}, rotate(50,'R',49));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 1}, rotate(50,'R',50));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 2}, rotate(50,'R',150));
 
-    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks = 0}, clicks(0,'R',99));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 1}, clicks(0,'R',100));
-    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 2}, clicks(0,'R',200));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 99, .clicks = 0}, rotate(0,'R',99));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 1}, rotate(0,'R',100));
+    try std.testing.expectEqual(ClicksRes{.new_pos = 0, .clicks = 2}, rotate(0,'R',200));
 }
 
 pub fn main() !void {
@@ -62,6 +62,20 @@ pub fn main() !void {
         const file_contents = try file.readToEndAlloc(allocator, 1024 * 1024 * 10); // 10MB max
         defer allocator.free(file_contents);
 
-        // std.debug.print("input contents:\n{s}\n", .{file_contents});
+        var lines = std.mem.splitSequence(u8, file_contents, &[_]u8{'\n'});
+        var pos: i32 = 50;
+        var zeroes: u32 = 0;
+        var clicks: u32 = 1;
+        while (lines.next()) |line| {
+            const dir = line[0];
+            const dist = try std.fmt.parseInt(u8, line[1..], 10);
+            const res = rotate(pos, dir, dist);
+            clicks += res.clicks;
+            pos = res.new_pos;
+            if (pos == 0) {
+                zeroes += 1;
+            }
+        }
+        std.debug.print("part 1: {}\npart 2: {}\n", .{zeroes, clicks});
     }
 }
