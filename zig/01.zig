@@ -6,7 +6,7 @@ const ClicksRes = struct {
 };
 
 fn rotate(start: i32, dir: u8, dist: i32) ClicksRes {
-    // std.debug.print("clicks {} {} {}\n", .{start,dir,dist});
+    // std.debug.print("clicks start={} dir={c} dist={}\n", .{start,dir,dist});
     if (dist == 0) {
         return .{.new_pos = start, .clicks = 0};
     }
@@ -18,7 +18,7 @@ fn rotate(start: i32, dir: u8, dist: i32) ClicksRes {
     if (start == 0 and dir == 'L') {
         ct -= 1;
     }
-    // std.debug.print("{} => {}({}) ~~~ {}/{}\n", .{start,new_real,new,q,ct});
+    // std.debug.print("start={} => new={}({}) ~~~ q={}/ct={}\n", .{start,new_real,new,q,ct});
     return ClicksRes{.new_pos = new_real, .clicks = ct};
 }
 
@@ -55,7 +55,7 @@ pub fn main() !void {
         return;
     }
     if (args.next()) |input| {
-        std.debug.print("input: {s}\n", .{input});
+        // std.debug.print("input: {s}\n", .{input});
         const file = try std.fs.cwd().openFile(input, .{});
         defer file.close();
 
@@ -65,17 +65,20 @@ pub fn main() !void {
         var lines = std.mem.splitSequence(u8, file_contents, &[_]u8{'\n'});
         var pos: i32 = 50;
         var zeroes: u32 = 0;
-        var clicks: u32 = 1;
+        var clicks: u32 = 0;
         while (lines.next()) |line| {
+            // std.debug.print("line: {s}\n", .{line});
             const dir = line[0];
-            const dist = try std.fmt.parseInt(u8, line[1..], 10);
+            const dist = try std.fmt.parseInt(i32, line[1..], 10);
             const res = rotate(pos, dir, dist);
             clicks += res.clicks;
             pos = res.new_pos;
             if (pos == 0) {
                 zeroes += 1;
             }
+            // std.debug.print("  => pos={}, clicks={} ({})\n", .{pos, clicks, res});
         }
-        std.debug.print("part 1: {}\npart 2: {}\n", .{zeroes, clicks});
+        var stdout = std.fs.File.stdout().writerStreaming(&.{});
+        try stdout.interface.print("part 1: {}\npart 2: {}\n", .{zeroes, clicks});
     }
 }
