@@ -10,7 +10,7 @@ sep() {
 # Make it harder to delete or change these.
 chmod 400 input/*
 
-if [ -e zig/${day}.zig ]; then
+if [ -e zig/${day}.zig ] && grep ^test zig/${day}.zig >&/dev/null; then
   sep
   (set -x; zig test zig/${day}.zig)
 fi

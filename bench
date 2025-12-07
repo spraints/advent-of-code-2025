@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -eu
+
+day="$(printf "%02d" "$1")"
+input=input/${day}.txt
+
+if [ ! -e $input ]; then
+  echo error: $input is missing.
+  exit 1
+fi
+
+solutions=()
+
+rb=rb/${day}.rb
+if [ -e $rb ]; then
+  solutions+=("ruby $rb $input")
+fi
+
+zig=zig/${day}.zig
+if [ -e $zig ]; then
+  echo Build $zig ...
+  zig build-exe -O ReleaseFast $zig
+  trap "rm -f ${day}" EXIT
+  solutions+=("./${day} $input")
+fi
+
+if [ ${#solutions[@]} -eq 0 ]; then
+  echo error: no solutions found.
+fi
+
+(set -x; hyperfine --warmup 1 "${solutions[@]}")
