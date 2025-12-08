@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const Range = struct { from: u64, to: u64 };
+const Range = struct { from_digits: u8, from: u64, to: u64 };
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -10,7 +10,7 @@ pub fn main() !void {
     const input = try read_input(allocator);
     defer allocator.free(input);
 
-    const State = enum { var r: Range = .{.from=0, .to=0}; from, to };
+    const State = enum { var r: Range = .{.from_digits=0, .from=0, .to=0}; from, to };
 
     var rangeList = std.ArrayList(Range).empty;
     defer rangeList.deinit(allocator);
@@ -26,6 +26,7 @@ pub fn main() !void {
                 if (c == '-') {
                     parse_state = .to;
                 } else {
+                    State.r.from_digits += 1;
                     State.r.from = State.r.from * 10 + (c - '0');
                 }
             },
@@ -33,12 +34,15 @@ pub fn main() !void {
                 if (c == ',') {
                     try rangeList.append(allocator, State.r);
                     parse_state = .from;
-                    State.r = .{.from=0,.to=0};
+                    State.r = .{.from_digits=0,.from=0,.to=0};
                 } else {
                     State.r.to = State.r.to * 10 + (c - '0');
                 }
             },
         }
+    }
+    if (parse_state == .to) {
+        try rangeList.append(allocator, State.r);
     }
 
     const ranges = try rangeList.toOwnedSlice(allocator);
@@ -52,6 +56,32 @@ pub fn main() !void {
     }
 
     var invalid1: u64 = 0;
+    //var seen1 = std.AutoHashMap(u64, void).init(allocator);
+    for (ranges) |range| {
+        // std.debug.print("RANGE {}\n", .{range});
+        const exp = (range.from_digits + 1) / 2;
+        var r = try std.math.powi(u64, 10, exp);
+        var l = range.from / r;
+        while (l * r < range.to) {
+            const lmin = try std.math.powi(u64, 10, exp - 1);
+            l = if (l > lmin) l else lmin;
+            for (l .. r) |i| {
+                const xy = i * r + i;
+                if (xy < range.from) {
+                    continue;
+                } else if (xy > range.to) {
+                    break;
+                } else {
+                    // std.debug.print("{}\n", .{xy});
+                    invalid1 += xy;
+                }
+            }
+            l = r;
+            r *= 10;
+        }
+    }
+    std.debug.print("part 1: {}\n", .{invalid1});
+
     var invalid2: u64 = 0;
     var seen = std.AutoHashMap(u64, void).init(allocator);
     defer seen.deinit();
