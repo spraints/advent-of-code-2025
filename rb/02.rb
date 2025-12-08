@@ -15,12 +15,14 @@ loop do
   l2 = l * r + l
   break if l2 > max
   #p [l, r, l2]
-  if !seen.include?(l2) && ranges.any? { |a,b| a <= l2 && l2 <= b }
+  if ranges.any? { |a,b| a <= l2 && l2 <= b }
     invalid1 += l2
-    invalid2 += l2
+    if !seen.include?(l2)
+      invalid2 += l2
+    end
     #p [:both, l2]
+    seen << l2
   end
-  seen << l2
   loop do
     iters += 1
     l2 = l2 * r + l
@@ -29,8 +31,8 @@ loop do
     if !seen.include?(l2) && ranges.any? { |a,b| a <= l2 && l2 <= b }
       invalid2 += l2
       #p [:part2, l2]
+      seen << l2
     end
-    seen << l2
   end
 
   l += 1
