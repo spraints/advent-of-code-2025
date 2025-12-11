@@ -1,4 +1,5 @@
 DEBUG = !ENV["DEBUG"].nil?
+SHOW_PIC = !ENV["SHOW_PIC"].nil?
 
 class Coord
   def initialize(pt)
@@ -33,7 +34,7 @@ raise "boom" if tpt1 == tpt4
 
 coords = ARGF.readlines.map { |line| Coord.new(line.strip.split(",").map(&:to_i)) }
 
-if DEBUG
+if SHOW_PIC
   picture = []
   last_pt = coords.last
   coords.each do |pt|
@@ -114,17 +115,16 @@ class Bounds
     end
     nil
   end
-  def contains?(pt)
+  def contains?(pt, verbose: false)
     if n = @cache[pt]
-      p cached: pt, n: n if DEBUG
+      p cached: pt, n: n if verbose
     else
-      @cache[pt] = n = count_edges(pt)
+      @cache[pt] = n = count_edges(pt, verbose: verbose)
     end
     n % 2 == 1
   end
   private
-  def count_edges(pt)
-    verbose = DEBUG && pt.x == 9 && pt.y == 5
+  def count_edges(pt, verbose: false)
     vert_matches = @vertical_edges.select { |e|
       e1, e2 = e
       xok = e1.x <= pt.x
@@ -149,7 +149,7 @@ class Bounds
     end
 
     n = vert_matches.size - dropped
-    pp summary_for: pt, n: n, vert: vert_matches if DEBUG
+    pp summary_for: pt, n: n, vert: vert_matches if verbose
     n
   end
   require "pp"
@@ -166,17 +166,18 @@ coords.each_with_index do |p1, i|
   rest = coords[i+2..] or next
   rest.each do |p2|
     a = area(p1, p2)
-    p check_rect: [p1, p2], a: a if DEBUG
+    verbose = DEBUG && a == 1704850740
+    p check_rect: [p1, p2], a: a if verbose
     max_area1 = [max_area1, a].max
     if a > max_area2
       # Check if all 4 corners are inside the shape.
       contained = [p1.x, p2.x].all? do |x|
         [p1.y, p2.y].all? do |y|
-          bounds.contains?(Coord.new([x, y]))
+          bounds.contains?(Coord.new([x, y]), verbose: verbose)
         end
       end
       if contained
-        puts "========> update part 2 = #{a}" if DEBUG
+        puts "========> update part 2 = #{a}" if verbose
         max_area2 = a
       end
     end
