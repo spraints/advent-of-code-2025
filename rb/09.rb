@@ -1,25 +1,39 @@
-coords = ARGF.readlines.map { |line| line.strip.split(",").map(&:to_i) }
+class Coord
+  def initialize(pt)
+    @x = pt[0]
+    @y = pt[1]
+  end
+  attr_reader :x, :y
+  def <=>(other)
+    [self.x, self.y] <=> [other.x, other.y]
+  end
+  def inspect
+    [self.x, self.y].inspect
+  end
+end
+
+coords = ARGF.readlines.map { |line| Coord.new(line.strip.split(",").map(&:to_i)) }
 
 if ENV["PIC"]
   picture = []
-  last_p = coords.last
-  coords.each do |p|
-    picture[p[1]] ||= []
-    picture[p[1]][p[0]] = "#"
+  last_pt = coords.last
+  coords.each do |pt|
+    line = (picture[pt.y] ||= [])
+    line[pt.x] = "#"
     case
-    when last_p[0] == p[0]
-      Range.new(*([p[1],last_p[1]].sort)).each do |y|
+    when last_pt.x == pt.x
+      Range.new(*([pt.y,last_pt.y].sort)).each do |y|
         picture[y] ||= []
-        picture[y][p[0]] = "X" if picture[y][p[0]].nil?
+        picture[y][pt.x] = "X" if picture[y][pt.x].nil?
       end
-    when last_p[1] == p[1]
-      Range.new(*([p[0],last_p[0]].sort)).each do |x|
-        picture[p[1]][x] = "X" if picture[p[1]][x].nil?
+    when last_pt.y == pt.y
+      Range.new(*([pt.x,last_pt.x].sort)).each do |x|
+        line[x] = "X" if line[x].nil?
       end
     else
-      raise "#{p} #{last_p} womp womp"
+      raise "#{pt} #{last_pt} womp womp"
     end
-    last_p = p
+    last_pt = pt
   end
   max_line = picture.map { |l| l.nil? ? 0 : l.size }.max
   printf "       %s\n", (0..max_line).map { |i| i % 10 }.join
@@ -34,16 +48,9 @@ if ENV["PIC"]
 end
 
 def area(p1, p2)
-  l = (p1[0] - p2[0]).abs + 1
-  w = (p1[1] - p2[1]).abs + 1
+  l = (p1.x - p2.x).abs + 1
+  w = (p1.y - p2.y).abs + 1
   l * w
-end
-
-def midpoint(p1, p2)
-  [
-    (p1[0] + p2[0]) / 2,
-    (p1[1] + p2[1]) / 2,
-  ]
 end
 
 class Bounds
@@ -54,47 +61,39 @@ class Bounds
   def add_edge(p1, p2)
     edge = [p1, p2].sort
     case
-    when p1[0] == p2[0]
+    when p1.x == p2.x
       @vertical_edges << edge
-    when p1[1] == p2[1]
+    when p1.y == p2.y
       @horizontal_edges << edge
     else
       raise "huh #{p1} #{p2}"
     end
     nil
   end
-  def contains?(p)
-    n = count_edges(p)
+  def contains?(pt)
+    n = count_edges(pt)
     n % 2 == 1
   end
   private
   def count_edges(pt)
-    px, py = pt
-    on_horiz = @horizontal_edges.any? { |e| e[0][1] == py && e[0][0] <= px && px <= e[1][0] }
-    horiz_matches = @horizontal_edges.select { |e| e[0][1] == py && e[0][0] <= px }
-    vert_matches = []
-    0.upto(py) do |y|
-      matches = @vertical_edges.select { |e| e[0][1] == y && e[0][0] <= px && px <= e[1][0] }
-      p y => matches unless matches.empty?
-      vert_matches += matches
-    end
+    vert_matches = @vertical_edges.select { |e|
+      e1, e2 = e
+      #p check: e, px: pt.x, py: pt.y,
+      #  xok: e1.x == pt.x && e1.x == pt.x,
+      #  yok: e1.y <= pt.y && pt.y <= e2.y
+      e1.x == pt.x && e1.x == pt.x && e1.y <= pt.y && pt.y <= e2.y
+    }
 
-    #  puts({
-    #    test_point: [px, y],
-    #    edges_found: n,
-    #    found_edges: @edges_by_y[y],
-    #  }.inspect)
     n = vert_matches.size
-    pp summary_for: pt, n: n, on_horiz: on_horiz,
-      horiz: horiz_matches, vert: vert_matches
+    pp summary_for: pt, n: n, vert: vert_matches
     n
   end
   require "pp"
 end
 
 bounds = Bounds.new
-coords.each_with_index do |p, i|
-  bounds.add_edge(p, i == 0 ? coords.last : coords[i-1])
+coords.each_with_index do |pt, i|
+  bounds.add_edge(pt, i == 0 ? coords.last : coords[i-1])
 end
 
 max_area1 = 0
@@ -107,9 +106,9 @@ coords.each_with_index do |p1, i|
     max_area1 = [max_area1, a].max
     if a > max_area2
       # Check if all 4 corners are inside the shape.
-      contained = [p1[0], p2[0]].all? do |x|
-        [p1[1], p2[1]].all? do |y|
-          bounds.contains?([x, y])
+      contained = [p1.x, p2.x].all? do |x|
+        [p1.y, p2.y].all? do |y|
+          bounds.contains?(Coord.new([x, y]))
         end
       end
       if contained
