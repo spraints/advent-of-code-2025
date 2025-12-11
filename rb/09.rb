@@ -48,17 +48,16 @@ end
 
 class Bounds
   def initialize
-    #@edges_by_x = Hash.new { |h, k| h[k] = [] }
-    @edges_by_y = Hash.new { |h, k| h[k] = [] }
-    @cache = {}
+    @vertical_edges = []
+    @horizontal_edges = []
   end
   def add_edge(p1, p2)
+    edge = [p1, p2].sort
     case
-    when p1[1] == p2[1]
-      p add_edge: [p1, p2]
-      @edges_by_y[p1[1]] << [p1[0], p2[0]].sort
     when p1[0] == p2[0]
-      # not needed
+      @vertical_edges << edge
+    when p1[1] == p2[1]
+      @horizontal_edges << edge
     else
       raise "huh #{p1} #{p2}"
     end
@@ -66,31 +65,31 @@ class Bounds
   end
   def contains?(p)
     n = count_edges(p)
-    puts({p: p, n: n}.inspect)
     n % 2 == 1
   end
   private
-  def count_edges(p)
-    px, py = p
-    n = 0
-    py.downto(0) do |y|
-      if cn = @cache[[px,y]]
-        n += cn
-        break
-      end
-      if @edges_by_y.key?(y) && @edges_by_y[y].any? { |x1, x2| x1 < px && px < x2 }
-        n += 1
-      end
-      puts({
-        test_point: [px, y],
-        edges_found: n,
-        found_edges: @edges_by_y[y],
-      }.inspect)
-      @cache[[px,y]] = n
+  def count_edges(pt)
+    px, py = pt
+    on_horiz = @horizontal_edges.any? { |e| e[0][1] == py && e[0][0] <= px && px <= e[1][0] }
+    horiz_matches = @horizontal_edges.select { |e| e[0][1] == py && e[0][0] <= px }
+    vert_matches = []
+    0.upto(py) do |y|
+      matches = @vertical_edges.select { |e| e[0][1] == y && e[0][0] <= px && px <= e[1][0] }
+      p y => matches unless matches.empty?
+      vert_matches += matches
     end
-    puts({summary_for: p, edges_found: n})
+
+    #  puts({
+    #    test_point: [px, y],
+    #    edges_found: n,
+    #    found_edges: @edges_by_y[y],
+    #  }.inspect)
+    n = vert_matches.size
+    pp summary_for: pt, n: n, on_horiz: on_horiz,
+      horiz: horiz_matches, vert: vert_matches
     n
   end
+  require "pp"
 end
 
 bounds = Bounds.new
@@ -106,9 +105,17 @@ coords.each_with_index do |p1, i|
     a = area(p1, p2)
     p check_rect: [p1, p2], a: a
     max_area1 = [max_area1, a].max
-    if a > max_area2 && bounds.contains?(midpoint(p1, p2))
-      puts "========> update part 2"
-      max_area2 = a
+    if a > max_area2
+      # Check if all 4 corners are inside the shape.
+      contained = [p1[0], p2[0]].all? do |x|
+        [p1[1], p2[1]].all? do |y|
+          bounds.contains?([x, y])
+        end
+      end
+      if contained
+        puts "========> update part 2"
+        max_area2 = a
+      end
     end
   end
 end
