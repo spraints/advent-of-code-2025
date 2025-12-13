@@ -24,14 +24,6 @@ class Coord
   end
 end
 
-tpt1 = Coord.new([1,1])
-tpt2 = Coord.new([1,1])
-tpt3 = Coord.new([1,2])
-tpt4 = Coord.new([2,1])
-raise "boom" if tpt1 != tpt2
-raise "boom" if tpt1 == tpt3
-raise "boom" if tpt1 == tpt4
-
 coords = ARGF.readlines.map { |line| Coord.new(line.strip.split(",").map(&:to_i)) }
 
 if SHOW_PIC
@@ -99,60 +91,62 @@ end
 
 class Bounds
   def initialize
-    @vertical_edges = []
-    @horizontal_edges = []
+    @vertical_edges = {} # x => [y1, y2]
+    @horizontal_edges = {} # y => [x1, x2]
+    @max_x = 0
+    @max_y = 0
     @cache = {}
   end
+  attr_reader :max_x, :max_y
   def add_edge(p1, p2)
-    edge = [p1, p2].sort
+    @max_x = [@max_x, p1.x, p2.x].max
+    @max_y = [@max_y, p1.y, p2.y].max
     case
     when p1.x == p2.x
-      @vertical_edges << edge
+      (@vertical_edges[p1.x] ||= []) << [p1.y, p2.y].sort
     when p1.y == p2.y
-      @horizontal_edges << edge
+      (@horizontal_edges[p1.y] ||= []) << [p1.x, p2.x].sort
     else
       raise "huh #{p1} #{p2}"
     end
     nil
   end
-  def contains?(pt, verbose: false)
-    if n = @cache[pt]
-      p cached: pt, n: n if verbose
-    else
-      @cache[pt] = n = count_edges(pt, verbose: verbose)
+  # Example:
+  # pt = [100,100]
+  # dir = [-1, -1]
+  # contains?(pt, dir)
+  def contains?(pt, dir, verbose:)
+    p start: "contains", pt: pt, dir: dir if verbose
+
+    k = [pt, dir]
+    return @cache[k] if @cache.key?(k) && !verbose
+
+    count = 0
+    x, y = pt
+    dx, dy = dir
+    while 0 < x && x <= @max_x && 0 < y && y <= @max_y
+      if on_edge?(x, y)
+        count += 1
+        p point_crosses_edge: [x, y] if verbose
+      end
+      x += dx
+      y += dy
     end
-    n % 2 == 1
+    p fn: :contains?, pt => count if verbose
+    res = count % 2 == 1
+    @cache[k] = res
+    res
   end
   private
-  def count_edges(pt, verbose: false)
-    vert_matches = @vertical_edges.select { |e|
-      e1, e2 = e
-      xok = e1.x <= pt.x
-      yok = e1.y <= pt.y && pt.y <= e2.y
-      if verbose
-        p check: e, px: pt.x, py: pt.y, xok: xok, yok: yok
-      end
-      xok && yok
-    }
-    dropped = 0
-    vert_matches.combination(2).each do |e1, e2|
-      p e1: e1, e2: e2 if verbose
-      dir1 = vert_edge_dir(e1, pt, verbose)
-      dir2 = vert_edge_dir(e2, pt, verbose)
-      next unless [dir1, dir2].sort == [:down, :up]
-      goal = [Coord.new([e1[0].x, pt.y]), Coord.new([e2[0].x, pt.y])].sort
-      puts "checking if there is an edge between #{e1} and #{e2} (#{goal})..." \
-        if verbose
-      next unless @horizontal_edges.include?(goal)
-      puts "... there is!" if verbose
-      dropped += 1
+  def on_edge?(x, y)
+    if ve = @vertical_edges[x]
+      return true if ve.any? { |y1, y2| y1 <= y && y <= y2 }
     end
-
-    n = vert_matches.size - dropped
-    pp summary_for: pt, n: n, vert: vert_matches if verbose
-    n
+    if he = @horizontal_edges[y]
+      return true if he.any? { |x1, x2| x1 <= x && x <= x2 }
+    end
+    false
   end
-  require "pp"
 end
 
 bounds = Bounds.new
@@ -160,27 +154,35 @@ coords.each_with_index do |pt, i|
   bounds.add_edge(pt, i == 0 ? coords.last : coords[i-1])
 end
 
+def in_bounds?(bounds, p1, p2, verbose:)
+  # Check if all 4 corners are inside the shape.
+  xmin, xmax = [p1.x, p2.x].sort
+  ymin, ymax = [p1.y, p2.y].sort
+  ok = bounds.contains?([xmin+1, ymin+1], [ 1,  1], verbose: verbose) &&
+    bounds.contains?([xmax-1, ymin+1], [-1,  1], verbose: verbose) &&
+    bounds.contains?([xmax-1, ymax-1], [-1, -1], verbose: verbose) &&
+    bounds.contains?([xmin+1, ymax-1], [ 1, -1], verbose: verbose)
+  p in_bounds: [p1, p2], res: ok if verbose
+  ok
+end
+
 max_area1 = 0
 max_area2 = 0
 coords.each_with_index do |p1, i|
   rest = coords[i+2..] or next
-  rest.each do |p2|
+  rest.each_with_index do |p2, j|
+    printf "\r%4d x %4d", i, j
     a = area(p1, p2)
+    next if a < 1
     verbose = DEBUG && a == 1704850740
     p check_rect: [p1, p2], a: a if verbose
     max_area1 = [max_area1, a].max
     if a > max_area2
-      # Check if all 4 corners are inside the shape.
-      contained = [p1.x, p2.x].all? do |x|
-        [p1.y, p2.y].all? do |y|
-          bounds.contains?(Coord.new([x, y]), verbose: verbose)
-        end
-      end
-      if contained
+      if in_bounds?(bounds, p1, p2, verbose: verbose)
         puts "========> update part 2 = #{a}" if verbose
         max_area2 = a
       end
     end
   end
 end
-puts max_area1, max_area2
+puts "", max_area1, max_area2
