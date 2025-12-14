@@ -174,14 +174,14 @@ coords.each_with_index do |p1, i|
     printf "\r%4d x %4d", i, j
     a = area(p1, p2)
     next if a < 1
-    verbose = DEBUG && a == 1704850740
-    p check_rect: [p1, p2], a: a if verbose
     max_area1 = [max_area1, a].max
-    if a > max_area2
-      if in_bounds?(bounds, p1, p2, verbose: verbose)
-        puts "========> update part 2 = #{a}" if verbose
-        max_area2 = a
+
+    if a > max_area2 && in_bounds?(bounds, p1, p2, verbose: false)
+      if DEBUG && a > 1704850740
+        p something: "is wrong", check_rect: [p1, p2], a: a
+        in_bounds?(bounds, p1, p2, verbose: true)
       end
+      max_area2 = a
     end
   end
 end
