@@ -114,27 +114,19 @@ class Bounds
   # Example:
   # pt = [100,100]
   # dir = [-1, -1]
-  # opposite_corner = [20, 50]
-  # contains?(pt, dir, no_crossing_before: opposite_corner)
-  def contains?(pt, dir, no_crossing_before:, verbose:)
-    p start: "contains", pt: pt, dir: dir, opp: no_crossing_before if verbose
+  # contains?(pt, dir)
+  def contains?(pt, dir, verbose:)
+    p start: "contains", pt: pt, dir: dir if verbose
 
-    k = [pt, no_crossing_before, dir]
+    k = [pt, dir]
     return @cache[k] if @cache.key?(k) && !verbose
 
     count = 0
     x, y = pt
     dx, dy = dir
-    nx, ny = no_crossing_before
-    past_n = false
     while 0 < x && x <= @max_x && 0 < y && y <= @max_y
-      past_n = true if x == nx || y == ny
       if on_edge?(x, y)
-        p point_crosses_edge: [x, y], past_min: past_n if verbose
-        if !past_n
-          @cache[k] = false
-          return false
-        end
+        p point_crosses_edge: [x, y] if verbose
         count += 1
       end
       x += dx
@@ -144,6 +136,26 @@ class Bounds
     res = count % 2 == 1
     @cache[k] = res
     res
+  end
+  # <----a---------b---------c---------d------>
+  # if p1, p2 are c,d and edge is a,b, no match. (y1,y2<ymin, y1,y2<ymax)
+  # if p1, p2 are b,d and edge is a,b, no match. (y1<ymin, y2==ymin, y1,y2<ymax)
+  # if p1, p2 are b,d and edge is a,c, match. (y1<ymin,y2>ymin,y2<ymax)
+  # if p1, p2 are b,c and edge is a,d, match. (y1<ymin,y2>ymax)
+  def any_edges_in?(p1, p2)
+    xmin, xmax = [p1.x, p2.x].sort
+    ymin, ymax = [p1.y, p2.y].sort
+    (xmin+1).upto(xmax-1) do |x|
+      if e = @vertical_edges[x]
+        return true if e.any? { |y1, y2| y1 <= ymax && y2 >= ymin }
+      end
+    end
+    (ymin+1).upto(ymax-1) do |y|
+      if e = @horizontal_edges[y]
+        return true if e.any? { |x1, x2| x1 <= xmax && x2 >= xmin }
+      end
+    end
+    return false
   end
   private
   def on_edge?(x, y)
@@ -163,16 +175,16 @@ coords.each_with_index do |pt, i|
 end
 
 def in_bounds?(bounds, p1, p2, verbose:)
+  # Check that there are no edges inside and that the inside of the rect is
+  # inside the overall shape.
   # Check if all 4 corners are inside the shape and don't have cavities.
   xmin, xmax = [p1.x, p2.x].sort
   ymin, ymax = [p1.y, p2.y].sort
-  ok =
-    bounds.contains?([xmin+1, ymin+1], [ 1,  1], no_crossing_before: [xmax, ymax], verbose: verbose) &&
-    bounds.contains?([xmax-1, ymin+1], [-1,  1], no_crossing_before: [xmin, ymax], verbose: verbose) &&
-    bounds.contains?([xmax-1, ymax-1], [-1, -1], no_crossing_before: [xmin, ymin], verbose: verbose) &&
-    bounds.contains?([xmin+1, ymax-1], [ 1, -1], no_crossing_before: [xmax, ymin], verbose: verbose)
-  p in_bounds: [p1, p2], res: ok if verbose
-  ok
+  ur = bounds.contains?([xmin, ymin], [-1, -1], verbose: verbose)
+  return false if !ur && !verbose
+  int = bounds.any_edges_in?(p1, p2)
+  p in_bounds: [p1, p2], inside_rect_is_inside_shape: ur, no_interior_crossings: !int if verbose
+  ur && !int
 end
 
 max_area1 = 0
