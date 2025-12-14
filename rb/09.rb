@@ -114,20 +114,28 @@ class Bounds
   # Example:
   # pt = [100,100]
   # dir = [-1, -1]
-  # contains?(pt, dir)
-  def contains?(pt, dir, verbose:)
-    p start: "contains", pt: pt, dir: dir if verbose
+  # opposite_corner = [20, 50]
+  # contains?(pt, dir, no_crossing_before: opposite_corner)
+  def contains?(pt, dir, no_crossing_before:, verbose:)
+    p start: "contains", pt: pt, dir: dir, opp: no_crossing_before if verbose
 
-    k = [pt, dir]
+    k = [pt, no_crossing_before, dir]
     return @cache[k] if @cache.key?(k) && !verbose
 
     count = 0
     x, y = pt
     dx, dy = dir
+    nx, ny = no_crossing_before
+    past_n = false
     while 0 < x && x <= @max_x && 0 < y && y <= @max_y
+      past_n = true if x == nx || y == ny
       if on_edge?(x, y)
+        p point_crosses_edge: [x, y], past_min: past_n if verbose
+        if !past_n
+          @cache[k] = false
+          return false
+        end
         count += 1
-        p point_crosses_edge: [x, y] if verbose
       end
       x += dx
       y += dy
@@ -155,13 +163,14 @@ coords.each_with_index do |pt, i|
 end
 
 def in_bounds?(bounds, p1, p2, verbose:)
-  # Check if all 4 corners are inside the shape.
+  # Check if all 4 corners are inside the shape and don't have cavities.
   xmin, xmax = [p1.x, p2.x].sort
   ymin, ymax = [p1.y, p2.y].sort
-  ok = bounds.contains?([xmin+1, ymin+1], [ 1,  1], verbose: verbose) &&
-    bounds.contains?([xmax-1, ymin+1], [-1,  1], verbose: verbose) &&
-    bounds.contains?([xmax-1, ymax-1], [-1, -1], verbose: verbose) &&
-    bounds.contains?([xmin+1, ymax-1], [ 1, -1], verbose: verbose)
+  ok =
+    bounds.contains?([xmin+1, ymin+1], [ 1,  1], no_crossing_before: [xmax, ymax], verbose: verbose) &&
+    bounds.contains?([xmax-1, ymin+1], [-1,  1], no_crossing_before: [xmin, ymax], verbose: verbose) &&
+    bounds.contains?([xmax-1, ymax-1], [-1, -1], no_crossing_before: [xmin, ymin], verbose: verbose) &&
+    bounds.contains?([xmin+1, ymax-1], [ 1, -1], no_crossing_before: [xmax, ymin], verbose: verbose)
   p in_bounds: [p1, p2], res: ok if verbose
   ok
 end
@@ -171,13 +180,13 @@ max_area2 = 0
 coords.each_with_index do |p1, i|
   rest = coords[i+2..] or next
   rest.each_with_index do |p2, j|
-    printf "\r%4d x %4d", i, j
+    printf "\r%4d x %4d  max = %d", i, j, max_area2
     a = area(p1, p2)
     next if a < 1
     max_area1 = [max_area1, a].max
 
     if a > max_area2 && in_bounds?(bounds, p1, p2, verbose: false)
-      if DEBUG && a > 1704850740
+      if DEBUG && a >= 1704850740
         p something: "is wrong", check_rect: [p1, p2], a: a
         in_bounds?(bounds, p1, p2, verbose: true)
       end
