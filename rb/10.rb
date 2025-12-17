@@ -19,38 +19,39 @@ def main
 end
 
 def prog(machines, done)
-  line = machines.each_with_index.map { |_, i| i < done ? "#" : "." }
-  printf "\r%s", line.join
+  printf "\r%4d / %4d", done, machines.size
 end
 
 def buttons_for_joltages(m)
-  choices = Hash.new { |h, k| h[k] = [] }
-  seen = Set.new
+  bfj_rec \
+    m: m,
+    res: m.jolts.map { 0 },
+    presses: 0,
+    buttons: m.buttons.dup,
+    best: m.buttons.size * m.jolts.max
+end
 
-  init = m.jolts.map { 0 }
-  choices[0] << init
-  seen << init
-
-  k = 0
-  loop do
-    choice = choices[k].shift
-    if choice.nil?
-      k += 1
-      choice = choices[k].shift
+def bfj_rec(m:, res:, presses:, buttons:, best:)
+  this_button, *rest = buttons
+  max_by_wire = m.jolts.zip(res).map { |a, b| a - b }
+  #p mbw: max_by_wire, mp: this_button.map { |i| [i, max_by_wire[i]] }
+  max_presses = this_button.map { |i| max_by_wire[i] }.min
+  #require "pp"; puts ""; pp res: res, goal: m.jolts, presses: presses, button: this_button, max_presses: max_presses, best: best, remaining_buttons: buttons.size
+  return best if best <= presses + max_presses
+  max_presses.downto(0) do |p|
+    new_res = res.dup
+    this_button.each do |i|
+      new_res[i] += p
     end
-    if choice.nil?
-      raise "ahhhhhh #{k} // #{choices.inspect}"
-    end
-    m.buttons.each do |b|
-      j = choice.dup
-      b.each { |i| j[i] += 1 }
-      next if seen.include?(j)
-      seen << j
-      return k + 1 if j == m.jolts
-      next if j.zip(m.jolts).any? { |x, y| x > y }
-      choices[k+1] << j
+    if new_res == m.jolts
+      best = [best, presses + p].min
+    elsif !rest.empty?
+      score = bfj_rec(m: m, res: new_res, presses: presses + p, buttons: rest, best: best)
+      best = [best, score].min
     end
   end
+  #p this_button => best
+  best
 end
 
 # Part 1:
