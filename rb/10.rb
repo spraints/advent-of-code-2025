@@ -5,9 +5,43 @@ end
 
 def main
   machines = ARGF.readlines.map { |line| parse_line(line) }
-  part1 = machines.sum { |m| fewest_button_presses(m) }
-  puts part1
+  part1 = part2 = 0
+  machines.each do |m|
+    part1 += fewest_button_presses(m)
+    part2 += buttons_for_joltages(m)
+  end
+  puts part1, part2
 end
+
+def buttons_for_joltages(m)
+  matrix = m.jolts.map { |j| ([0] * m.buttons.size) + [j] }
+  m.buttons.each_with_index do |b, i|
+    b.each do |j|
+      matrix[j][i] = 1
+    end
+  end
+  matrix.sort!.reverse!
+  require "pp"; pp matrix
+  solved = []
+  while ref = matrix.shift
+
+  end
+  pp solved
+  exit 0
+end
+
+# Part 1:
+#         e+f = 0 mod 2
+#   b      +f = 1 mod 2
+#     c+d+e   = 1 mod 2
+# a+b  +d     = 0 mod 2
+# 0+1+0+1+0+0
+#
+# Part 2:
+#         e+f = 3
+#   b      +f = 5
+#     c+d+e   = 4
+# a+b  +d     = 7
 
 def fewest_button_presses(m)
   dbg m
