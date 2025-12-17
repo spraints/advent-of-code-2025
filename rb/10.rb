@@ -6,28 +6,51 @@ end
 def main
   machines = ARGF.readlines.map { |line| parse_line(line) }
   part1 = part2 = 0
-  machines.each do |m|
+  machines.each_with_index do |m, i|
+    prog machines, i
     part1 += fewest_button_presses(m)
+  end
+  puts "", part1
+  machines.each_with_index do |m, i|
+    prog machines, i
     part2 += buttons_for_joltages(m)
   end
-  puts part1, part2
+  puts "", part2
+end
+
+def prog(machines, done)
+  line = machines.each_with_index.map { |_, i| i < done ? "#" : "." }
+  printf "\r%s", line.join
 end
 
 def buttons_for_joltages(m)
-  matrix = m.jolts.map { |j| ([0] * m.buttons.size) + [j] }
-  m.buttons.each_with_index do |b, i|
-    b.each do |j|
-      matrix[j][i] = 1
+  choices = Hash.new { |h, k| h[k] = [] }
+  seen = Set.new
+
+  init = m.jolts.map { 0 }
+  choices[0] << init
+  seen << init
+
+  k = 0
+  loop do
+    choice = choices[k].shift
+    if choice.nil?
+      k += 1
+      choice = choices[k].shift
+    end
+    if choice.nil?
+      raise "ahhhhhh #{k} // #{choices.inspect}"
+    end
+    m.buttons.each do |b|
+      j = choice.dup
+      b.each { |i| j[i] += 1 }
+      next if seen.include?(j)
+      seen << j
+      return k + 1 if j == m.jolts
+      next if j.zip(m.jolts).any? { |x, y| x > y }
+      choices[k+1] << j
     end
   end
-  matrix.sort!.reverse!
-  require "pp"; pp matrix
-  solved = []
-  while ref = matrix.shift
-
-  end
-  pp solved
-  exit 0
 end
 
 # Part 1:
