@@ -23,35 +23,54 @@ def prog(machines, done)
 end
 
 def buttons_for_joltages(m)
-  bfj_rec \
-    m: m,
-    res: m.jolts.map { 0 },
-    presses: 0,
-    buttons: m.buttons.dup,
-    best: m.buttons.size * m.jolts.max
-end
-
-def bfj_rec(m:, res:, presses:, buttons:, best:)
-  this_button, *rest = buttons
-  max_by_wire = m.jolts.zip(res).map { |a, b| a - b }
-  #p mbw: max_by_wire, mp: this_button.map { |i| [i, max_by_wire[i]] }
-  max_presses = this_button.map { |i| max_by_wire[i] }.min
-  #require "pp"; puts ""; pp res: res, goal: m.jolts, presses: presses, button: this_button, max_presses: max_presses, best: best, remaining_buttons: buttons.size
-  return best if best <= presses + max_presses
-  max_presses.downto(0) do |p|
-    new_res = res.dup
-    this_button.each do |i|
-      new_res[i] += p
-    end
-    if new_res == m.jolts
-      best = [best, presses + p].min
-    elsif !rest.empty?
-      score = bfj_rec(m: m, res: new_res, presses: presses + p, buttons: rest, best: best)
-      best = [best, score].min
+  return 0
+  matrix = m.jolts.map { |j| ([0] * m.buttons.size) + [j] }
+  m.buttons.each_with_index do |b, i|
+    b.each do |j|
+      matrix[j][i] = 1
     end
   end
-  #p this_button => best
-  best
+  matrix.sort!.reverse!
+  p m.buttons
+  p m.jolts
+  require "pp"; pp matrix
+  done = []
+  i = 0
+  while eq = matrix.shift
+    done << eq
+    while eq[i] == 0
+      i += 1
+    end
+    if i > (eq.size - 2)
+      done += matrix
+      break
+    end
+    matrix.each do |other|
+      if other[i] != 0
+        sub_in_place(other, eq, Rational(other[i])/eq[i])
+        j = other.index { |x| x != 0 }
+        if j && other[j] < 0
+          indices(other).each do |k|
+            other[k] *= -1
+          end
+        end
+      end
+    end
+    matrix.sort!.reverse!
+    pp i: i, eq: eq, matrix: matrix
+  end
+  pp done
+  0
+end
+
+def sub_in_place(dst, amts, factor)
+  indices(dst).each do |i|
+    dst[i] -= factor * amts[i]
+  end
+end
+
+def indices(ary)
+  0..(ary.size-1)
 end
 
 # Part 1:
